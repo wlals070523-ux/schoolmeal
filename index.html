@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>오늘, 뭐 먹지? · 전국 학교 급식 조회</title>
+
+<!-- 글꼴: 임팩트 있는 제목용 Black Han Sans + 본문용 Pretendard -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+
+<style>
+/* ============================================================
+   디자인 토큰
+   팔레트: 시금치 그린(구조) · 감귤 탠저린(강조) · 노른자 옐로(포인트)
+           크림 배경 + 스테인리스 식판 메탈
+   ============================================================ */
+:root{
+  --ink:#20301e;
+  --ink-soft:#586b54;
+  --paper:#f6f1e4;
+  --paper-2:#fffdf6;
+  --green:#2f6b3c;
+  --green-deep:#1e4a28;
+  --tangerine:#ff6a2b;
+  --tangerine-deep:#e5500f;
+  --yolk:#ffc23c;
+  --tray-1:#eef2f3;
+  --tray-2:#c6d0d3;
+  --tray-3:#9aa8ac;
+  --tray-edge:#7f8f93;
+  --line:rgba(31,74,41,.14);
+  --shadow-soft:0 22px 45px -22px rgba(31,74,41,.45);
+  --radius:22px;
+  --font-display:'Black Han Sans', 'Pretendard', sans-serif;
+  --font-body:'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+}
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:var(--font-body);
+  color:var(--ink);
+  background:var(--paper);
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+  min-height:100vh;
+}
+
+/* ── 배경 앰비언트 블롭 ───────────────────────────── */
+.bg{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;}
+.blob{position:absolute;border-radius:50%;filter:blur(70px);opacity:.5;}
+.blob.b1{width:44vw;height:44vw;background:radial-gradient(circle,#ffd873,transparent 70%);top:-12%;left:-8%;animation:drift1 20s ease-in-out infinite;}
+.blob.b2{width:40vw;height:40vw;background:radial-gradient(circle,#ff9a5e,transparent 70%);bottom:-16%;right:-10%;animation:drift2 24s ease-in-out infinite;}
+.blob.b3{width:34vw;height:34vw;background:radial-gradient(circle,#7fd88f,transparent 70%);top:38%;right:22%;animation:drift3 28s ease-in-out infinite;}
+@keyframes drift1{50%{transform:translate(6vw,5vh) scale(1.1);}}
+@keyframes drift2{50%{transform:translate(-5vw,-4vh) scale(1.08);}}
+@keyframes drift3{50%{transform:translate(-4vw,6vh) scale(.92);}}
+
+/* ── 레이아웃 ─────────────────────────────────────── */
+.wrap{max-width:1040px;margin:0 auto;padding:32px 20px 80px;}
+
+/* ── 헤더 ─────────────────────────────────────────── */
+.hero{text-align:center;padding:22px 0 8px;}
+.tray-icon{
+  width:88px;height:64px;margin:0 auto 18px;position:relative;
+  background:linear-gradient(160deg,var(--tray-1),var(--tray-2) 60%,var(--tray-3));
+  border-radius:16px;
+  box-shadow:inset 0 3px 8px rgba(255,255,255,.8),inset 0 -6px 14px rgba(70,84,88,.4),0 12px 24px -10px rgba(31,74,41,.5);
+  border:1px solid rgba(255,255,255,.6);
+  animation:bob 3.2s ease-in-out infinite;
+}
+.tray-icon::before,.tray-icon::after{
+  content:"";position:absolute;top:10px;border-radius:8px;
+  background:linear-gradient(150deg,#f4f7f8,#d3dcdf);
+  box-shadow:inset 0 2px 4px rgba(255,255,255,.9),inset 0 -3px 6px rgba(90,105,110,.35);
+}
+.tray-icon::before{left:10px;width:34px;height:44px;}
+.tray-icon::after{right:10px;width:26px;height:20px;top:34px;box-shadow:inset 0 2px 4px rgba(255,255,255,.9),inset 0 -3px 6px rgba(90,105,110,.35);}
+.tray-icon i{position:absolute;right:10px;top:10px;width:26px;height:20px;border-radius:8px;background:linear-gradient(150deg,#fff0cf,#ffd67a);box-shadow:inset 0 2px 4px rgba(255,255,255,.9);}
+.tray-icon .steam{position:absolute;top:-14px;width:5px;height:16px;border-radius:5px;background:rgba(255,255,255,.85);filter:blur(1px);animation:steam 2.4s ease-in-out infinite;}
+.tray-icon .steam.s1{left:20px;}
+.tray-icon .steam.s2{left:30px;animation-delay:.6s;}
+.tray-icon .steam.s3{left:40px;animation-delay:1.2s;}
+@keyframes bob{50%{transform:translateY(-7px);}}
+@keyframes steam{0%{opacity:0;transform:translateY(4px) scaleY(.6);}40%{opacity:.9;}100%{opacity:0;transform:translateY(-16px) scaleY(1.3);}}
+
+.eyebrow{
+  display:inline-block;font-family:var(--font-body);font-weight:700;font-size:13px;letter-spacing:.14em;
+  color:var(--green);background:rgba(47,107,60,.1);padding:6px 14px;border-radius:999px;margin-bottom:14px;
+}
+h1{
+  font-family:var(--font-display);font-weight:400;
+  font-size:clamp(40px,7.5vw,72px);line-height:1;margin:0 0 14px;letter-spacing:-.01em;
+  color:var(--ink);
+}
+h1 .accent{color:var(--tangerine);}
+.hero p{margin:0 auto;max-width:460px;color:var(--ink-soft);font-size:16px;}
+
+.reveal{opacity:0;transform:translateY(18px);animation:rise .7s cubic-bezier(.2,.7,.2,1) forwards;}
+.d1{animation-delay:.05s;}.d2{animation-delay:.15s;}.d3{animation-delay:.25s;}.d4{animation-delay:.35s;}
+@keyframes rise{to{opacity:1;transform:none;}}
+
+/* ── 검색 카드 ────────────────────────────────────── */
+.search-card{
+  margin:30px auto 0;max-width:720px;background:var(--paper-2);
+  border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow-soft);padding:22px;
+}
+.search-row{display:flex;gap:10px;flex-wrap:wrap;}
+.field{flex:1 1 260px;display:flex;flex-direction:column;gap:6px;}
+.field label{font-size:12.5px;font-weight:700;color:var(--ink-soft);padding-left:2px;}
+input[type=text],select,input[type=date]{
+  font-family:var(--font-body);font-size:15px;color:var(--ink);
+  padding:13px 15px;border:1.5px solid var(--line);border-radius:14px;background:#fff;
+  transition:border-color .18s,box-shadow .18s;width:100%;
+}
+input[type=text]:focus,select:focus,input[type=date]:focus{
+  outline:none;border-color:var(--tangerine);box-shadow:0 0 0 4px rgba(255,106,43,.15);
+}
+select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23586b54' stroke-width='3'><path d='M6 9l6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 15px center;padding-right:40px;}
+.btn{
+  font-family:var(--font-body);font-weight:800;font-size:15px;color:#fff;cursor:pointer;border:none;
+  background:linear-gradient(135deg,var(--tangerine),var(--tangerine-deep));
+  padding:13px 24px;border-radius:14px;transition:transform .12s,box-shadow .18s,filter .18s;
+  box-shadow:0 10px 20px -8px rgba(229,80,15,.7);white-space:nowrap;
+}
+.btn:hover{transform:translateY(-2px);box-shadow:0 16px 26px -10px rgba(229,80,15,.8);}
+.btn:active{transform:translateY(0);filter:brightness(.96);}
+.btn.full{align-self:flex-end;height:48px;}
+.search-note{font-size:12.5px;color:var(--ink-soft);margin:14px 2px 0;}
+.shake{animation:shake .4s;}
+@keyframes shake{0%,100%{transform:none;}20%,60%{transform:translateX(-6px);}40%,80%{transform:translateX(6px);}}
+
+/* ── 상태(로딩/빈/오류) ───────────────────────────── */
+.state{text-align:center;padding:46px 20px;color:var(--ink-soft);}
+.state .emoji{font-size:44px;display:block;margin-bottom:12px;}
+.state h3{font-family:var(--font-body);font-weight:800;color:var(--ink);margin:0 0 6px;font-size:18px;}
+.state p{margin:0;font-size:14.5px;}
+.spinner{width:46px;height:46px;margin:0 auto 16px;border-radius:50%;border:5px solid rgba(47,107,60,.18);border-top-color:var(--tangerine);animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── 학교 검색 결과 ───────────────────────────────── */
+.section{margin-top:34px;}
+.section-title{font-family:var(--font-body);font-weight:800;font-size:15px;color:var(--ink);margin:0 0 14px;display:flex;align-items:center;gap:8px;}
+.section-title .count{font-weight:700;color:var(--tangerine);}
+.school-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;}
+.school-card{
+  text-align:left;cursor:pointer;background:var(--paper-2);border:1.5px solid var(--line);
+  border-radius:16px;padding:16px 16px 14px;transition:transform .16s,box-shadow .18s,border-color .18s;
+  opacity:0;transform:translateY(14px);animation:rise .5s ease forwards;
+}
+.school-card:hover{transform:translateY(-4px);border-color:var(--green);box-shadow:0 16px 28px -16px rgba(31,74,41,.5);}
+.school-card:focus-visible{outline:3px solid var(--tangerine);outline-offset:2px;}
+.school-card .name{font-weight:800;font-size:16px;margin-bottom:8px;line-height:1.35;}
+.school-card .addr{font-size:12.5px;color:var(--ink-soft);display:flex;gap:5px;align-items:flex-start;}
+.kind-badge{display:inline-block;font-size:11.5px;font-weight:800;padding:3px 9px;border-radius:999px;margin-bottom:8px;}
+.k-elem{background:rgba(47,107,60,.14);color:var(--green-deep);}
+.k-mid{background:rgba(43,108,255,.13);color:#1b4fd1;}
+.k-high{background:rgba(140,72,220,.14);color:#6d29b8;}
+.k-etc{background:rgba(88,107,84,.14);color:var(--ink-soft);}
+
+/* ── 선택 학교 + 날짜 내비 ────────────────────────── */
+.picker{
+  margin-top:30px;background:linear-gradient(135deg,var(--green),var(--green-deep));
+  border-radius:var(--radius);padding:20px 22px;color:#fff;box-shadow:var(--shadow-soft);
+  display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;
+}
+.picker .sch{min-width:200px;}
+.picker .sch .n{font-weight:800;font-size:19px;line-height:1.3;}
+.picker .sch .m{font-size:13px;opacity:.85;margin-top:3px;}
+.picker .sch .change{margin-top:8px;font-size:12.5px;color:#fff;background:rgba(255,255,255,.16);border:none;padding:5px 12px;border-radius:999px;cursor:pointer;font-weight:700;transition:background .15s;}
+.picker .sch .change:hover{background:rgba(255,255,255,.28);}
+.datenav{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.14);padding:6px;border-radius:16px;}
+.datenav button{width:40px;height:40px;border-radius:12px;border:none;background:rgba(255,255,255,.2);color:#fff;font-size:20px;cursor:pointer;transition:background .15s,transform .1s;display:flex;align-items:center;justify-content:center;}
+.datenav button:hover{background:rgba(255,255,255,.35);}
+.datenav button:active{transform:scale(.92);}
+.datenav .datebox{display:flex;flex-direction:column;align-items:center;min-width:150px;}
+.datenav .datebox .dow{font-size:12px;opacity:.85;}
+.datenav .datebox input[type=date]{background:transparent;border:none;color:#fff;font-weight:800;font-size:16px;text-align:center;padding:2px;cursor:pointer;width:150px;}
+.datenav .datebox input[type=date]:focus{box-shadow:none;}
+.datenav .datebox input::-webkit-calendar-picker-indicator{filter:invert(1);cursor:pointer;}
+.today-btn{background:var(--yolk)!important;color:var(--green-deep)!important;font-weight:800;font-size:13px!important;width:auto!important;padding:0 14px;}
+
+/* ── 식판(시그니처) ───────────────────────────────── */
+.meals{margin-top:26px;display:flex;flex-direction:column;gap:24px;}
+.meal{opacity:0;transform:translateY(20px);animation:rise .6s cubic-bezier(.2,.7,.2,1) forwards;}
+.meal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;padding:0 4px;flex-wrap:wrap;}
+.meal-title{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:400;font-size:26px;}
+.meal-title .dot{width:12px;height:12px;border-radius:50%;}
+.m-1 .dot{background:var(--yolk);} .m-2 .dot{background:var(--tangerine);} .m-3 .dot{background:var(--green);}
+.cal{font-weight:800;font-size:14px;color:var(--tangerine-deep);background:rgba(255,106,43,.12);padding:6px 13px;border-radius:999px;}
+
+.tray{
+  position:relative;
+  background:linear-gradient(160deg,#e4ebed,#bdc8cb 55%,#a7b4b8);
+  border-radius:24px;padding:16px;border:1px solid rgba(255,255,255,.55);
+  box-shadow:inset 0 3px 10px rgba(255,255,255,.75),inset 0 -8px 20px rgba(70,84,88,.42),0 20px 40px -20px rgba(31,74,41,.45);
+}
+.tray .steam{position:absolute;top:-6px;width:6px;height:20px;border-radius:6px;background:rgba(255,255,255,.7);filter:blur(1.5px);animation:steam 2.8s ease-in-out infinite;pointer-events:none;}
+.tray .steam.a{left:24%;} .tray .steam.b{left:50%;animation-delay:.9s;} .tray .steam.c{left:76%;animation-delay:1.7s;}
+.dishes{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;position:relative;z-index:1;}
+.dish{
+  background:linear-gradient(150deg,#f4f7f8,#d7dfe1);
+  border-radius:14px;padding:16px 14px;min-height:78px;
+  display:flex;flex-direction:column;justify-content:center;gap:8px;text-align:center;
+  box-shadow:inset 0 2px 5px rgba(255,255,255,.9),inset 0 -4px 9px rgba(90,105,110,.32);
+  opacity:0;transform:scale(.9);animation:plop .45s cubic-bezier(.2,.9,.3,1.3) forwards;
+}
+@keyframes plop{to{opacity:1;transform:none;}}
+.dish .dname{font-weight:700;font-size:15px;color:var(--ink);line-height:1.35;word-break:keep-all;}
+.dish .tags{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;}
+.dish .tag{font-size:10.5px;font-weight:800;color:var(--tangerine-deep);background:rgba(255,106,43,.15);padding:2px 7px;border-radius:999px;}
+
+/* ── 식단 하단: 알레르기/영양/원산지 ──────────────── */
+.meal-foot{margin-top:12px;display:flex;flex-direction:column;gap:10px;}
+.allergy-line{font-size:12.5px;color:var(--ink-soft);padding:0 4px;}
+.allergy-line b{color:var(--green-deep);}
+details{background:var(--paper-2);border:1px solid var(--line);border-radius:14px;overflow:hidden;}
+summary{cursor:pointer;list-style:none;padding:12px 16px;font-weight:700;font-size:13.5px;color:var(--ink);display:flex;align-items:center;justify-content:space-between;transition:background .15s;}
+summary::-webkit-details-marker{display:none;}
+summary:hover{background:rgba(47,107,60,.05);}
+summary .chev{transition:transform .2s;font-size:12px;color:var(--ink-soft);}
+details[open] summary .chev{transform:rotate(180deg);}
+.detail-body{padding:4px 16px 16px;}
+.kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px 16px;font-size:13px;}
+.kv .row{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px dashed var(--line);}
+.kv .row span:first-child{color:var(--ink-soft);}
+.kv .row span:last-child{font-weight:700;}
+
+/* ── 알레르기 범례 ────────────────────────────────── */
+.legend{margin-top:36px;}
+.legend .detail-body{padding:12px 16px 18px;}
+.legend-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px;font-size:12.5px;}
+.legend-grid span{color:var(--ink-soft);}
+.legend-grid span b{color:var(--tangerine-deep);}
+
+footer{text-align:center;margin-top:44px;font-size:12px;color:var(--ink-soft);line-height:1.7;}
+footer a{color:var(--green);}
+
+.hidden{display:none!important;}
+
+@media (max-width:560px){
+  .wrap{padding:22px 14px 60px;}
+  .picker{flex-direction:column;align-items:stretch;}
+  .datenav{justify-content:space-between;}
+  .datenav .datebox,.datenav .datebox input[type=date]{min-width:0;width:auto;flex:1;}
+  .meal-title{font-size:22px;}
+  .btn.full{width:100%;}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;}
+  .reveal,.meal,.school-card,.dish{opacity:1!important;transform:none!important;}
+}
+</style>
+</head>
+<body>
+
+<div class="bg" aria-hidden="true">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+</div>
+
+<div class="wrap">
+
+  <!-- 헤더 -->
+  <header class="hero">
+    <div class="tray-icon reveal d1" aria-hidden="true">
+      <i></i>
+      <span class="steam s1"></span><span class="steam s2"></span><span class="steam s3"></span>
+    </div>
+    <span class="eyebrow reveal d1">전국 초·중·고 급식 조회</span>
+    <h1 class="reveal d2">오늘, <span class="accent">뭐 먹지?</span></h1>
+    <p class="reveal d3">학교 이름과 날짜만 고르면 급식 식단을 식판째로 확인할 수 있어요.</p>
+  </header>
+
+  <!-- 검색 -->
+  <section class="search-card reveal d4">
+    <div class="search-row">
+      <div class="field">
+        <label for="q">학교 이름</label>
+        <input type="text" id="q" placeholder="예: 서울forest초등학교, ○○중학교" autocomplete="off" />
+      </div>
+      <div class="field" style="flex:0 1 220px;">
+        <label for="office">교육청(지역)</label>
+        <select id="office"></select>
+      </div>
+      <div class="field" style="flex:0 0 auto;">
+        <label>&nbsp;</label>
+        <button class="btn full" id="searchBtn">🔍 급식 찾기</button>
+      </div>
+    </div>
+    <p class="search-note">학교 이름 일부만 입력해도 검색됩니다. 동명 학교가 많다면 교육청(지역)을 함께 선택해 주세요.</p>
+  </section>
+
+  <!-- 학교 결과 -->
+  <section class="section hidden" id="schoolSection">
+    <h3 class="section-title">🏫 검색된 학교 <span class="count" id="schoolCount"></span></h3>
+    <div class="school-grid" id="schoolGrid"></div>
+  </section>
+
+  <!-- 선택 학교 + 날짜 + 식단 -->
+  <section class="section hidden" id="mealSection">
+    <div class="picker">
+      <div class="sch">
+        <div class="n" id="pkName">—</div>
+        <div class="m" id="pkMeta"></div>
+        <button class="change" id="changeSchool">↺ 다른 학교 선택</button>
+      </div>
+      <div class="datenav">
+        <button id="prevDay" title="이전 날">‹</button>
+        <div class="datebox">
+          <span class="dow" id="dowLabel"></span>
+          <input type="date" id="dateInput" />
+        </div>
+        <button id="nextDay" title="다음 날">›</button>
+        <button class="today-btn" id="todayBtn">오늘</button>
+      </div>
+    </div>
+    <div id="mealArea"></div>
+  </section>
+
+  <!-- 알레르기 범례 -->
+  <section class="legend">
+    <details>
+      <summary>알레르기 유발식품 번호 안내 <span class="chev">▾</span></summary>
+      <div class="detail-body">
+        <div class="legend-grid" id="legendGrid"></div>
+      </div>
+    </details>
+  </section>
+
+  <footer>
+    데이터 제공: 교육부 · 나이스(NEIS) 교육정보 개방 포털 open API<br />
+    급식 정보가 없는 날은 주말·공휴일이거나 학교에서 아직 등록하지 않았을 수 있어요.
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ── 상수 ─────────────────────────────────────── */
+  var API = "https://open.neis.go.kr/hub/";
+
+  // 나이스 서버는 브라우저 직접요청(CORS)을 막으므로, 직접연결 실패 시
+  // 아래 공개 프록시를 순서대로 경유해 XML을 가져온다. (API 키 불필요)
+  var PROXIES = [
+    { raw:true,  build:function(u){ return "https://api.codetabs.com/v1/proxy/?quest="+encodeURIComponent(u); } },
+    { raw:false, build:function(u){ return "https://api.allorigins.win/get?url="+encodeURIComponent(u); },
+                 pick:function(t){ return JSON.parse(t).contents; } },
+    { raw:true,  build:function(u){ return "https://corsproxy.io/?url="+encodeURIComponent(u); } }
+  ];
+
+  // 시도교육청 코드
+  var OFFICES = [
+    ["","전국 전체"],
+    ["B10","서울특별시교육청"],["C10","부산광역시교육청"],["D10","대구광역시교육청"],
+    ["E10","인천광역시교육청"],["F10","광주광역시교육청"],["G10","대전광역시교육청"],
+    ["H10","울산광역시교육청"],["I10","세종특별자치시교육청"],["J10","경기도교육청"],
+    ["K10","강원특별자치도교육청"],["M10","충청북도교육청"],["N10","충청남도교육청"],
+    ["P10","전북특별자치도교육청"],["Q10","전라남도교육청"],["R10","경상북도교육청"],
+    ["S10","경상남도교육청"],["T10","제주특별자치도교육청"],["V10","재외한국학교"]
+  ];
+
+  // 알레르기 유발식품 번호 (식약처 표시 기준)
+  var ALLERGENS = {
+    1:"난류",2:"우유",3:"메밀",4:"땅콩",5:"대두",6:"밀",7:"고등어",8:"게",9:"새우",10:"돼지고기",
+    11:"복숭아",12:"토마토",13:"아황산류",14:"호두",15:"닭고기",16:"쇠고기",17:"오징어",18:"조개류",19:"잣"
+  };
+
+  // 식사 종류 메타 (MMEAL_SC_CODE 기준)
+  var MEAL_META = {
+    "1":{label:"조식",emoji:"🌅",cls:"m-1"},
+    "2":{label:"중식",emoji:"🍚",cls:"m-2"},
+    "3":{label:"석식",emoji:"🌙",cls:"m-3"}
+  };
+  var DOW = ["일","월","화","수","목","금","토"];
+
+  /* ── 상태 ─────────────────────────────────────── */
+  var selectedSchool = null;
+  var currentDate = new Date();
+
+  /* ── DOM ──────────────────────────────────────── */
+  var $ = function(id){ return document.getElementById(id); };
+  var q=$("q"), office=$("office"), searchBtn=$("searchBtn"),
+      schoolSection=$("schoolSection"), schoolGrid=$("schoolGrid"), schoolCount=$("schoolCount"),
+      mealSection=$("mealSection"), pkName=$("pkName"), pkMeta=$("pkMeta"),
+      changeSchool=$("changeSchool"), prevDay=$("prevDay"), nextDay=$("nextDay"),
+      todayBtn=$("todayBtn"), dateInput=$("dateInput"), dowLabel=$("dowLabel"),
+      mealArea=$("mealArea"), legendGrid=$("legendGrid");
+
+  /* ── 유틸 ─────────────────────────────────────── */
+  function pad(n){ return n<10 ? "0"+n : ""+n; }
+  function ymd(d){ return d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate()); }
+  function toInput(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+  function fromInput(s){ var p=s.split("-"); return new Date(+p[0],+p[1]-1,+p[2]); }
+  function esc(s){ return (s||"").replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
+
+  // XML 요소의 단순 텍스트
+  function txt(node,tag){ var e=node.getElementsByTagName(tag)[0]; return e ? e.textContent.trim() : ""; }
+
+  // <br/>가 실제 요소이든 이스케이프된 문자열이든 모두 줄바꿈으로 변환
+  function brokenText(node,tag){
+    var e=node.getElementsByTagName(tag)[0];
+    if(!e) return "";
+    var out="";
+    for(var i=0;i<e.childNodes.length;i++){
+      var ch=e.childNodes[i];
+      if(ch.nodeType===3) out+=ch.nodeValue;
+      else if(ch.nodeType===1 && ch.nodeName.toLowerCase()==="br") out+="\n";
+      else out+=ch.textContent;
+    }
+    return out.replace(/<br\s*\/?>/gi,"\n");
+  }
+
+  // XML 문자열 → Document (유효성까지 검사)
+  function parseDoc(xmlText){
+    var doc=new DOMParser().parseFromString(xmlText,"text/xml");
+    if(doc.getElementsByTagName("parsererror").length) throw new Error("XML parse error");
+    // 정상/오류 응답 모두 CODE 또는 row 를 포함 → 없으면 프록시가 엉뚱한 응답을 준 것
+    if(!doc.getElementsByTagName("CODE").length && !doc.getElementsByTagName("row").length)
+      throw new Error("invalid response");
+    return doc;
+  }
+
+  // 직접연결 → 프록시들 순차 시도. 모두 실패하면 reject.
+  function fetchXML(targetUrl){
+    var routes=[{direct:true}].concat(PROXIES);
+    var i=0;
+    function attempt(){
+      if(i>=routes.length) return Promise.reject(new Error("Failed to fetch"));
+      var r=routes[i++];
+      var url=r.direct ? targetUrl : r.build(targetUrl);
+      return fetch(url).then(function(res){
+        if(!res.ok) throw new Error("HTTP "+res.status);
+        return res.text();
+      }).then(function(t){
+        var xmlText=(r.direct||r.raw) ? t : r.pick(t);
+        return parseDoc(xmlText);
+      }).catch(function(){
+        return attempt(); // 다음 경로로
+      });
+    }
+    return attempt();
+  }
+
+  function apiResult(doc){
+    return { code:txt(doc,"CODE"), msg:txt(doc,"MESSAGE") };
+  }
+
+  /* ── 초기화 ───────────────────────────────────── */
+  OFFICES.forEach(function(o){
+    var op=document.createElement("option");
+    op.value=o[0]; op.textContent=o[1];
+    if(o[0]==="J10") op.selected=false;
+    office.appendChild(op);
+  });
+  Object.keys(ALLERGENS).forEach(function(k){
+    var s=document.createElement("span");
+    s.innerHTML="<b>"+k+"</b> "+ALLERGENS[k];
+    legendGrid.appendChild(s);
+  });
+  dateInput.value=toInput(currentDate);
+  updateDow();
+
+  /* ── 학교 검색 ────────────────────────────────── */
+  function searchSchools(){
+    var name=q.value.trim();
+    if(!name){
+      q.classList.remove("shake"); void q.offsetWidth; q.classList.add("shake");
+      q.focus();
+      return;
+    }
+    schoolSection.classList.remove("hidden");
+    schoolGrid.innerHTML="";
+    schoolCount.textContent="";
+    schoolGrid.innerHTML='<div class="state" style="grid-column:1/-1;"><div class="spinner"></div><p>학교를 찾고 있어요…</p></div>';
+
+    var url=API+"schoolInfo?Type=xml&pIndex=1&pSize=100&SCHUL_NM="+encodeURIComponent(name);
+    if(office.value) url+="&ATPT_OFCDC_SC_CODE="+office.value;
+
+    fetchXML(url).then(function(doc){
+      var rows=doc.getElementsByTagName("row");
+      if(!rows.length){
+        var r=apiResult(doc);
+        renderState(schoolGrid,"🔎","검색 결과가 없어요",
+          "학교 이름을 다시 확인하거나, 이름의 일부만 입력해 보세요."+(r.msg?"<br><small>("+esc(r.msg)+")</small>":""));
+        return;
+      }
+      var list=[];
+      for(var i=0;i<rows.length;i++){
+        list.push({
+          office:txt(rows[i],"ATPT_OFCDC_SC_CODE"),
+          officeName:txt(rows[i],"ATPT_OFCDC_SC_NM"),
+          code:txt(rows[i],"SD_SCHUL_CODE"),
+          name:txt(rows[i],"SCHUL_NM"),
+          kind:txt(rows[i],"SCHUL_KND_SC_NM"),
+          region:txt(rows[i],"LCTN_SC_NM"),
+          address:txt(rows[i],"ORG_RDNMA")
+        });
+      }
+      renderSchools(list);
+    }).catch(function(){
+      renderState(schoolGrid,"⚠️","학교 정보를 불러오지 못했어요",
+        "자료 서버 연결이 일시적으로 막혔을 수 있어요. 잠시 후 다시 시도하거나,<br>이 파일을 내려받아 브라우저에서 직접 열면 더 안정적으로 동작합니다.");
+    });
+  }
+
+  function kindClass(k){
+    if(k.indexOf("초등")>-1) return "k-elem";
+    if(k.indexOf("중학")>-1) return "k-mid";
+    if(k.indexOf("고등")>-1) return "k-high";
+    return "k-etc";
+  }
+
+  function renderSchools(list){
+    schoolCount.textContent=list.length+"곳";
+    schoolGrid.innerHTML="";
+    list.forEach(function(s,idx){
+      var card=document.createElement("button");
+      card.type="button";
+      card.className="school-card";
+      card.style.animationDelay=(idx*0.03)+"s";
+      var addr=[s.region,s.address].filter(Boolean).join(" · ");
+      card.innerHTML=
+        '<span class="kind-badge '+kindClass(s.kind)+'">'+esc(s.kind||"학교")+'</span>'+
+        '<div class="name">'+esc(s.name)+'</div>'+
+        '<div class="addr">📍 <span>'+esc(addr||s.officeName)+'</span></div>';
+      card.addEventListener("click",function(){ chooseSchool(s); });
+      schoolGrid.appendChild(card);
+    });
+  }
+
+  /* ── 학교 선택 → 식단 ─────────────────────────── */
+  function chooseSchool(s){
+    selectedSchool=s;
+    pkName.textContent=s.name;
+    pkMeta.textContent=[s.kind,s.region,s.officeName].filter(Boolean).join(" · ");
+    mealSection.classList.remove("hidden");
+    schoolSection.classList.add("hidden");
+    mealSection.scrollIntoView({behavior:"smooth",block:"start"});
+    loadMeal();
+  }
+
+  function loadMeal(){
+    if(!selectedSchool) return;
+    mealArea.innerHTML='<div class="state"><div class="spinner"></div><p>급식 식단을 차리는 중…</p></div>';
+    var url=API+"mealServiceDietInfo?Type=xml"+
+      "&ATPT_OFCDC_SC_CODE="+selectedSchool.office+
+      "&SD_SCHUL_CODE="+selectedSchool.code+
+      "&MLSV_YMD="+ymd(currentDate);
+
+    fetchXML(url).then(function(doc){
+      var rows=doc.getElementsByTagName("row");
+      if(!rows.length){
+        renderState(mealArea,"🍽️","이 날은 급식 정보가 없어요",
+          "주말·공휴일이거나 아직 식단이 등록되지 않았을 수 있어요. 다른 날짜를 확인해 보세요.");
+        return;
+      }
+      var meals=[];
+      for(var i=0;i<rows.length;i++){
+        meals.push({
+          typeCode:txt(rows[i],"MMEAL_SC_CODE"),
+          typeName:txt(rows[i],"MMEAL_SC_NM"),
+          dishes:brokenText(rows[i],"DDISH_NM"),
+          cal:txt(rows[i],"CAL_INFO"),
+          ntr:brokenText(rows[i],"NTR_INFO"),
+          orplc:brokenText(rows[i],"ORPLC_INFO")
+        });
+      }
+      meals.sort(function(a,b){ return (a.typeCode||"9")>(b.typeCode||"9")?1:-1; });
+      renderMeals(meals);
+    }).catch(function(){
+      renderState(mealArea,"⚠️","급식 정보를 불러오지 못했어요",
+        "자료 서버 연결이 일시적으로 막혔을 수 있어요. 잠시 후 다시 시도하거나,<br>이 파일을 내려받아 브라우저에서 직접 열면 더 안정적으로 동작합니다.");
+    });
+  }
+
+  /* ── 메뉴 파싱 ────────────────────────────────── */
+  function parseDishes(raw){
+    return raw.split(/\n+/).map(function(s){return s.trim();}).filter(Boolean).map(function(item){
+      var m=item.match(/\(([\d.\s]+)\)\s*$/);
+      var name=item, codes=[];
+      if(m){
+        name=item.slice(0,m.index).trim();
+        codes=m[1].split(".").map(function(x){return x.trim();}).filter(function(x){return /^\d+$/.test(x);});
+      }
+      return {name:name, codes:codes};
+    });
+  }
+
+  // "라벨 : 값" 형태 파싱
+  function parseKV(raw){
+    return raw.split(/\n+/).map(function(s){return s.trim();}).filter(Boolean).map(function(line){
+      var i=line.indexOf(":");
+      if(i>-1) return {k:line.slice(0,i).trim(), v:line.slice(i+1).trim()};
+      return {k:line, v:""};
+    });
+  }
+
+  /* ── 식단 렌더 ────────────────────────────────── */
+  function renderMeals(meals){
+    mealArea.innerHTML="";
+    var meals_wrap=document.createElement("div");
+    meals_wrap.className="meals";
+
+    meals.forEach(function(meal,mi){
+      var meta=MEAL_META[meal.typeCode] || {label:meal.typeName||"급식",emoji:"🍽️",cls:"m-2"};
+      var dishes=parseDishes(meal.dishes);
+
+      // 이 식단에 포함된 알레르기 번호 모으기
+      var allSet={};
+      dishes.forEach(function(d){ d.codes.forEach(function(c){ allSet[c]=true; }); });
+      var allCodes=Object.keys(allSet).map(Number).sort(function(a,b){return a-b;});
+
+      var el=document.createElement("div");
+      el.className="meal";
+      el.style.animationDelay=(mi*0.12)+"s";
+
+      // 식판 칸
+      var dishesHTML=dishes.map(function(d,di){
+        var tags=d.codes.map(function(c){return '<span class="tag">'+c+"</span>";}).join("");
+        return '<div class="dish" style="animation-delay:'+(mi*0.12+0.15+di*0.05)+'s">'+
+                 '<div class="dname">'+esc(d.name)+"</div>"+
+                 (tags?'<div class="tags">'+tags+"</div>":"")+
+               "</div>";
+      }).join("");
+
+      // 알레르기 요약
+      var allergyLine="";
+      if(allCodes.length){
+        var names=allCodes.map(function(c){return ALLERGENS[c]?(c+" "+ALLERGENS[c]):c;}).join(", ");
+        allergyLine='<div class="allergy-line">⚠️ <b>알레르기 유발식품:</b> '+esc(names)+"</div>";
+      }
+
+      // 영양 / 원산지
+      var ntr=parseKV(meal.ntr), orplc=parseKV(meal.orplc);
+      var ntrHTML = ntr.length ? detailsBlock("🥗 영양정보", kvHTML(ntr)) : "";
+      var orpHTML = orplc.length ? detailsBlock("🌾 원산지정보", kvHTML(orplc)) : "";
+
+      el.innerHTML=
+        '<div class="meal-head '+meta.cls+'">'+
+          '<div class="meal-title"><span class="dot"></span>'+meta.emoji+" "+esc(meta.label)+"</div>"+
+          (meal.cal?'<div class="cal">🔥 '+esc(meal.cal)+"</div>":"")+
+        "</div>"+
+        '<div class="tray '+meta.cls+'">'+
+          '<span class="steam a"></span><span class="steam b"></span><span class="steam c"></span>'+
+          '<div class="dishes">'+dishesHTML+"</div>"+
+        "</div>"+
+        '<div class="meal-foot">'+allergyLine+ntrHTML+orpHTML+"</div>";
+
+      meals_wrap.appendChild(el);
+    });
+
+    mealArea.appendChild(meals_wrap);
+  }
+
+  function detailsBlock(title,inner){
+    return "<details><summary>"+title+' <span class="chev">▾</span></summary>'+
+           '<div class="detail-body">'+inner+"</div></details>";
+  }
+  function kvHTML(list){
+    return '<div class="kv">'+list.map(function(r){
+      return '<div class="row"><span>'+esc(r.k)+"</span><span>"+esc(r.v)+"</span></div>";
+    }).join("")+"</div>";
+  }
+
+  /* ── 공통 상태 렌더 ───────────────────────────── */
+  function renderState(container,emoji,title,desc){
+    container.innerHTML='<div class="state" style="grid-column:1/-1;">'+
+      '<span class="emoji">'+emoji+"</span>"+
+      "<h3>"+title+"</h3><p>"+desc+"</p></div>";
+  }
+
+  /* ── 날짜 내비게이션 ──────────────────────────── */
+  function updateDow(){
+    dowLabel.textContent=DOW[currentDate.getDay()]+"요일";
+  }
+  function shiftDay(delta){
+    currentDate.setDate(currentDate.getDate()+delta);
+    dateInput.value=toInput(currentDate);
+    updateDow();
+    loadMeal();
+  }
+
+  /* ── 이벤트 ───────────────────────────────────── */
+  searchBtn.addEventListener("click",searchSchools);
+  q.addEventListener("keydown",function(e){ if(e.key==="Enter") searchSchools(); });
+  changeSchool.addEventListener("click",function(){
+    schoolSection.classList.remove("hidden");
+    schoolSection.scrollIntoView({behavior:"smooth",block:"start"});
+    q.focus();
+  });
+  prevDay.addEventListener("click",function(){ shiftDay(-1); });
+  nextDay.addEventListener("click",function(){ shiftDay(1); });
+  todayBtn.addEventListener("click",function(){
+    currentDate=new Date();
+    dateInput.value=toInput(currentDate);
+    updateDow(); loadMeal();
+  });
+  dateInput.addEventListener("change",function(){
+    if(!dateInput.value) return;
+    currentDate=fromInput(dateInput.value);
+    updateDow(); loadMeal();
+  });
+
+})();
+</script>
+</body>
+</html>
